@@ -1,0 +1,68 @@
+name: "SDLC Agent Orchestrator"
+description: "Run SDLC AI agents on your repository. Supports Context Builder, Code Review, Code Gen, and Test Gen."
+
+inputs:
+  config-path:
+    description: "Path to .agents/config.yaml"
+    required: false
+    default: ".agents/config.yaml"
+  agent:
+    description: "Which agent to run (context-builder, code-review, code-gen, test-gen, auto)"
+    required: false
+    default: "auto"
+  model-override:
+    description: "Override the model from config.yaml (e.g., claude-opus-4-6)"
+    required: false
+  anthropic-api-key:
+    description: "Anthropic API key"
+    required: true
+  openai-api-key:
+    description: "OpenAI API key (optional, for fallback)"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install agent platform
+      shell: bash
+      run: |
+        # Clone or reference the sdlc-agents platform
+        # In production, this would be a versioned npm package or pinned Action
+        echo "Installing SDLC agent platform..."
+        cd ${{ github.action_path }}
+        npm ci
+        npm run build
+
+    - name: Run agent
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+      run: |
+        AGENT="${{ inputs.agent }}"
+        REPO_ROOT="${{ github.workspace }}"
+        PLATFORM_ROOT="${{ github.action_path }}"
+
+        echo "🤖 Running SDLC Agent: $AGENT"
+        echo "   Repo: $REPO_ROOT"
+        echo "   Config: ${{ inputs.config-path }}"
+
+        if [ "$AGENT" = "context-builder" ] || [ "$AGENT" = "auto" ]; then
+          node "$PLATFORM_ROOT/packages/agent-context/dist/cli.js" \
+            --repo "$REPO_ROOT" \
+            --platform "$PLATFORM_ROOT" \
+            ${{ inputs.model-override && format('--model {0}', inputs.model-override) || '' }}
+        fi
+
+    - name: Upload generated docs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: agent-docs
+        path: .agents/docs/
+        if-no-files-found: ignore

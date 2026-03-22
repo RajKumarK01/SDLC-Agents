@@ -1,0 +1,42 @@
+# Stack Profile: .NET 8 Web API
+# Referenced by repos via .agents/stack-profile.yaml → profile: dotnet-8-webapi
+
+stack:
+  language: "C#"
+  runtime: ".NET 8"
+  framework: "ASP.NET Core Web API"
+  build-tool: "dotnet build"
+  test-command: "dotnet test"
+  package-manager: "NuGet"
+
+conventions:
+  file-naming: "PascalCase for classes, matching filename to class name"
+  directory-structure:
+    controllers: "Controllers/"
+    services: "Services/"
+    models: "Models/"
+    dtos: "DTOs/ or Models/DTOs/"
+    repositories: "Repositories/ or Data/"
+    middleware: "Middleware/"
+    extensions: "Extensions/"
+    tests: "*.Tests/ (separate project)"
+
+  patterns:
+    dependency-injection: "Constructor injection via built-in DI container"
+    configuration: "appsettings.json with IOptions<T> pattern"
+    error-handling: "Global exception middleware + ProblemDetails"
+    logging: "ILogger<T> via Microsoft.Extensions.Logging"
+    validation: "DataAnnotations or FluentValidation"
+
+  testing:
+    framework: "xUnit (preferred) or NUnit"
+    naming: "{ClassName}Tests.cs"
+    pattern: "Arrange-Act-Assert"
+    mocking: "Moq or NSubstitute"
+
+code-review-focus:
+  - "Check for async/await correctness (no sync-over-async)"
+  - "Verify DI registrations match interfaces"
+  - "Ensure controllers are thin (logic in services)"
+  - "Check for proper use of cancellation tokens"
+  - "Validate model binding and input validation"

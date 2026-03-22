@@ -1,0 +1,21 @@
+# Organization-wide PR conventions.
+
+pr-conventions:
+  require-description: true
+  require-linked-issue: true
+  max-files-per-pr: 20
+  require-tests: true
+
+  labels:
+    agent-generated: "🤖 ai-generated"
+    needs-review: "needs-review"
+    auto-approved: false     # Agents never auto-approve
+
+  commit-message:
+    format: "conventional"   # conventional commits (feat:, fix:, chore:, etc.)
+    include-agent-tag: true  # Prefix with [agent] for traceability
+
+code-quality:
+  require-linting: true
+  require-type-checking: true
+  max-complexity: 15         # Cyclomatic complexity threshold for warnings

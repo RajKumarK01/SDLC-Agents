@@ -1,0 +1,13 @@
+# .agents/stack-profile.yaml — Tech Stack Profile Reference
+#
+# Point to a shared stack profile from the sdlc-agents platform repo,
+# and optionally add inline overrides.
+#
+# Available profiles (see sdlc-agents/stack-profiles/):
+#   - dotnet-8-webapi
+#   - node-ts-express
+#   - d365fo-extensions
+#
+# Set profile to "auto" to let the Context Builder agent detect it.
+
+profile: auto

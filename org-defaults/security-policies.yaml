@@ -1,0 +1,25 @@
+# Organization-wide security policies for AI agents.
+# These apply to ALL repos unless explicitly overridden.
+
+security:
+  # Paths that agents must NEVER read or send to model APIs
+  sensitive-paths:
+    - "**/.env"
+    - "**/.env.*"
+    - "**/secrets/**"
+    - "**/appsettings.*.json"
+    - "**/credentials/**"
+    - "**/*.pfx"
+    - "**/*.pem"
+    - "**/*.key"
+
+  # Patterns to redact from any content sent to models
+  redact-patterns:
+    - "password\\s*[:=]\\s*['\"].*?['\"]"
+    - "api[_-]?key\\s*[:=]\\s*['\"].*?['\"]"
+    - "connection[_-]?string\\s*[:=]\\s*['\"].*?['\"]"
+    - "sk-[a-zA-Z0-9]+"
+
+  # Agent output restrictions
+  never-auto-merge: true
+  require-human-review: true

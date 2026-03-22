@@ -1,0 +1,111 @@
+# .github/workflows/sdlc-agents.yml
+# Copy this into your repository to enable AI agents.
+#
+# Prerequisites:
+#   1. Copy sample-agents-dir/ into your repo as .agents/
+#   2. Set ANTHROPIC_API_KEY in your repo's GitHub Secrets
+#   3. Adjust .agents/config.yaml to your needs
+
+name: SDLC Agents
+
+on:
+  # Trigger context-builder on manual dispatch or weekly
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Agent to run"
+        required: true
+        default: "context-builder"
+        type: choice
+        options:
+          - context-builder
+          - code-review
+          - code-gen
+
+  # Trigger on issue labels (for code-gen, test-gen)
+  issues:
+    types: [labeled]
+
+  # Trigger on PR events (for code-review)
+  pull_request:
+    types: [opened, synchronize]
+
+  # Weekly context refresh
+  schedule:
+    - cron: "0 6 * * 1"  # Monday 6am UTC
+
+jobs:
+  # ───────────────────────────────────────
+  # Context Builder — Manual or scheduled
+  # ───────────────────────────────────────
+  context-builder:
+    if: >
+      github.event_name == 'workflow_dispatch' && github.event.inputs.agent == 'context-builder' ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'issues' && contains(github.event.label.name, 'agent:docs'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # For the POC, clone the platform repo directly.
+      # In production, this would be a published Action reference.
+      - name: Clone agent platform
+        run: |
+          git clone https://github.com/YOUR-ORG/sdlc-agents.git /tmp/sdlc-agents
+          cd /tmp/sdlc-agents
+          npm ci
+          npm run build
+
+      - name: Run Context Builder
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          node /tmp/sdlc-agents/packages/agent-context/dist/cli.js \
+            --repo ${{ github.workspace }} \
+            --platform /tmp/sdlc-agents
+
+      - name: Commit generated docs
+        run: |
+          cd ${{ github.workspace }}
+          git config user.name "sdlc-agent[bot]"
+          git config user.email "sdlc-agent[bot]@users.noreply.github.com"
+          git add .agents/docs/
+          git diff --staged --quiet || git commit -m "[agent] Update context documentation"
+          git push
+
+  # ───────────────────────────────────────
+  # Code Review — On PR events (Phase 1)
+  # ───────────────────────────────────────
+  code-review:
+    if: >
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issues' && contains(github.event.label.name, 'agent:review'))
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Code Review agent — not yet implemented. Coming in Phase 1."
+
+  # ───────────────────────────────────────
+  # Code Generator — On issue labeled (Phase 2)
+  # ───────────────────────────────────────
+  code-gen:
+    if: >
+      github.event_name == 'issues' && contains(github.event.label.name, 'agent:implement') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.agent == 'code-gen')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Code Gen agent — not yet implemented. Coming in Phase 2."

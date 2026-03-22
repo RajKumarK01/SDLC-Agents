@@ -1,0 +1,33 @@
+# .agents/context.yaml — Repo-Specific Context Overrides
+#
+# This file provides repo-specific context that agents use to understand
+# your codebase. It OVERRIDES org defaults and stack profile values.
+#
+# TIPS:
+# - Be specific: "Uses CQRS with MediatR" > "uses patterns"
+# - Focus on what's unique to THIS repo, not general conventions
+# - The Context Builder agent (Agent 0) can auto-generate initial docs,
+#   but these manual overrides always take precedence.
+
+project:
+  name: ""                  # Your project name
+  description: ""           # One-line description
+  domain: ""                # Business domain (e.g., "logistics", "fintech", "healthcare")
+
+# Key domain entities — helps agents understand the business model
+# domain-entities:
+#   - name: Order
+#     description: A customer purchase order
+#   - name: Shipment
+#     description: Physical delivery of goods
+
+# Architecture notes — anything an AI agent should know
+# architecture:
+#   pattern: "CQRS with MediatR"
+#   api-style: "REST"
+#   auth: "JWT via Azure AD"
+
+# Coding conventions that differ from the stack profile
+# conventions:
+#   naming: "PascalCase for public, camelCase for private"
+#   error-handling: "Use Result<T> pattern, never throw exceptions in domain layer"

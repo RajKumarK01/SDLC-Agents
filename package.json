@@ -1,0 +1,23 @@
+{
+  "name": "sdlc-agents",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Model-agnostic SDLC AI agent platform",
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w packages/core",
+    "build:context": "npm run build -w packages/agent-context",
+    "lint": "eslint packages/*/src/**/*.ts",
+    "test": "npm run test --workspaces --if-present",
+    "context-builder": "npm run build && node packages/agent-context/dist/cli.js",
+    "simulate-ci": "npm run build && node packages/agent-context/dist/simulate-ci.js",
+    "simulate-ci:dry": "npm run build && node packages/agent-context/dist/simulate-ci.js --skip-model"
+  },
+  "workspaces": [
+    "packages/core",
+    "packages/agent-context"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

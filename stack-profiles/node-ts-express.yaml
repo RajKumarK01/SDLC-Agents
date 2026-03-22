@@ -1,0 +1,43 @@
+# Stack Profile: Node.js / TypeScript with Express
+# Referenced by repos via .agents/stack-profile.yaml → profile: node-ts-express
+
+stack:
+  language: "TypeScript"
+  runtime: "Node.js 20+"
+  framework: "Express.js"
+  build-tool: "tsc (or esbuild/swc for production)"
+  test-command: "npm test"
+  package-manager: "npm or yarn"
+
+conventions:
+  file-naming: "kebab-case for files (user-service.ts), PascalCase for classes"
+  directory-structure:
+    routes: "src/routes/"
+    controllers: "src/controllers/"
+    services: "src/services/"
+    models: "src/models/"
+    middleware: "src/middleware/"
+    utils: "src/utils/"
+    types: "src/types/"
+    tests: "__tests__/ or *.test.ts co-located"
+
+  patterns:
+    module-system: "ES modules with TypeScript"
+    error-handling: "Express error middleware + custom error classes"
+    validation: "Zod or Joi schemas"
+    configuration: "dotenv + typed config module"
+    logging: "winston or pino"
+
+  testing:
+    framework: "Jest or Vitest"
+    naming: "*.test.ts or *.spec.ts"
+    pattern: "describe/it blocks with arrange-act-assert"
+    mocking: "jest.mock() or vi.mock()"
+    integration: "supertest for HTTP endpoints"
+
+code-review-focus:
+  - "Check for proper error propagation (next(err) in Express)"
+  - "Verify TypeScript strict mode compliance"
+  - "Ensure no 'any' types without justification"
+  - "Check async error handling (try/catch or express-async-errors)"
+  - "Validate input at API boundaries"

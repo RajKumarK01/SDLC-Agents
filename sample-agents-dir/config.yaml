@@ -1,0 +1,52 @@
+# .agents/config.yaml — SDLC Agent Configuration
+# Copy this file into your repo at .agents/config.yaml to enable agents.
+
+models:
+  # Model identifiers. Agents reference these by alias (primary, fallback, fast).
+  primary: claude-sonnet-4-20250514    # Best quality for code review/gen
+  fallback: gpt-4o                     # If primary fails
+  fast: claude-sonnet-4-20250514       # For lightweight tasks (context builder)
+
+runtime:
+  type: github-actions
+  max-retries: 3
+  timeout-minutes: 30
+
+agents:
+  context-builder:
+    enabled: true
+    model: fast
+    trigger:
+      - manual
+      - schedule:weekly
+      - issue_labeled:agent:docs
+
+  code-review:
+    enabled: false          # Enable in Phase 1
+    model: primary
+    trigger:
+      - pr_opened
+      - pr_updated
+
+  code-gen:
+    enabled: false          # Enable in Phase 2
+    model: primary
+    trigger:
+      - issue_labeled:agent:implement
+    auto-merge: false       # NEVER set to true for D365 repos
+
+  test-gen:
+    enabled: false          # Enable in Phase 2
+    model: primary
+    trigger:
+      - issue_labeled:agent:test
+
+guardrails:
+  require-human-review: true
+  max-files-changed: 20
+  blocked-paths:
+    - .github/
+    - .agents/config.yaml
+    - "**/secrets/**"
+    - "**/.env"
+    - "**/appsettings.*.json"

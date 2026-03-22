@@ -1,0 +1,56 @@
+# Stack Profile: Dynamics 365 Finance & Operations
+# Referenced by repos via .agents/stack-profile.yaml → profile: d365fo-extensions
+#
+# ⚠️ IMPORTANT: D365 FO agents are REVIEW-ONLY in Phase 1.
+# Code generation for X++ is deferred to Phase 3 due to:
+#   - Limited LLM training data for X++
+#   - Risk of business data corruption from incorrect code
+#   - Complex metadata-driven development model
+
+stack:
+  language: "X++"
+  runtime: "Dynamics 365 Finance & Operations"
+  framework: "D365 FO Extension Model"
+  build-tool: "Visual Studio / MSBuild"
+  package-manager: "NuGet (for .NET dependencies)"
+  ide: "Visual Studio with D365 FO development tools"
+
+conventions:
+  file-naming: "PascalCase, prefixed with ISV/partner prefix"
+  extension-model:
+    pattern: "Extensions over overlayering (mandatory since D365 FO)"
+    naming: "{OriginalObject}_Extension"
+  directory-structure:
+    tables: "AxTable/"
+    classes: "AxClass/"
+    forms: "AxForm/"
+    data-entities: "AxDataEntityView/"
+    security: "AxSecurityRole/, AxSecurityDuty/, AxSecurityPrivilege/"
+    menus: "AxMenuItem*/"
+
+  patterns:
+    data-access: "Query objects or direct table buffers"
+    business-logic: "Classes with static or instance methods"
+    event-handlers: "Pre/Post event handlers on table/class methods"
+    chain-of-command: "CoC for extending standard methods"
+
+agent-restrictions:
+  # Phase 1: Review-only. No code generation.
+  allowed-actions:
+    - code-review
+    - documentation
+    - data-entity-analysis
+    - extension-impact-assessment
+  blocked-actions:
+    - code-generation
+    - auto-merge
+    - direct-commit
+  require-human-reviewers: 2  # Minimum 2 humans must approve D365 changes
+
+code-review-focus:
+  - "Verify extensions don't break standard functionality"
+  - "Check for proper use of Chain of Command vs event handlers"
+  - "Validate data entity field mappings and staging table config"
+  - "Ensure security roles follow least-privilege principle"
+  - "Check for runAs() misuse or privilege escalation"
+  - "Verify no direct SQL or bypassing of X++ data access layer"

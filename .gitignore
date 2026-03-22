@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.js.map
+.env
+.env.*
+!.env.example
+*.tgz
+coverage/
+.nyc_output/
