@@ -158,7 +158,7 @@ function extractTag(content: string, tag: string): string {
 export async function runContextBuilder(
   repoRoot: string,
   platformRoot: string,
-  modelName: string = "claude-sonnet-4-20250514",
+  modelName: string = "claude-sonnet-4-6",
   fallbackModel?: string
 ): Promise<AgentResult> {
   const start = Date.now();

@@ -11,7 +11,7 @@
  * Options:
  *   --repo       Path to the target repository (required)
  *   --platform   Path to the sdlc-agents platform repo (defaults to cwd)
- *   --model      Model to use (default: claude-sonnet-4-20250514)
+ *   --model      Model to use (default: claude-sonnet-4-6)
  *   --fallback   Fallback model (optional)
  *   --dry-run    Scan repo and show prompt, but don't call the model
  */
@@ -48,7 +48,7 @@ Usage:
 Options:
   --repo       Path to the target repository (REQUIRED)
   --platform   Path to sdlc-agents repo (default: current directory)
-  --model      Model name (default: claude-sonnet-4-20250514)
+  --model      Model name (default: claude-sonnet-4-6)
   --fallback   Fallback model name
   --dry-run    Show scan results without calling the model
 
@@ -64,7 +64,7 @@ Example:
 
   const repoRoot = path.resolve(args.repo);
   const platformRoot = path.resolve(args.platform ?? process.cwd());
-  const model = args.model ?? "claude-sonnet-4-20250514";
+  const model = args.model ?? "claude-sonnet-4-6";
   const fallback = args.fallback;
   const dryRun = args["dry-run"] === "true";
 

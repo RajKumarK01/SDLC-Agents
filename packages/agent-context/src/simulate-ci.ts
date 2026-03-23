@@ -58,10 +58,6 @@ function warn(text: string): void {
   console.log(`${c.yellow}  ⚠️  ${text}${c.reset}`);
 }
 
-function info(text: string): void {
-  console.log(`${c.dim}     ${text}${c.reset}`);
-}
-
 function ciLog(text: string): void {
   console.log(`${c.dim}  │ ${text}${c.reset}`);
 }
@@ -174,7 +170,7 @@ ${c.bold}Options:${c.reset}
   --repo        Path to target repository (REQUIRED)
   --trigger     Trigger type: manual, issue_labeled, schedule (default: manual)
   --label       Issue label (for issue_labeled trigger, default: agent:docs)
-  --model       Model override (default: from config.yaml or claude-sonnet-4-20250514)
+  --model       Model override (default: from config.yaml or claude-sonnet-4-6)
   --skip-model  Skip the actual model call (shows everything except AI output)
 
 ${c.bold}Environment:${c.reset}
@@ -318,26 +314,29 @@ ${c.bold}Examples:${c.reset}
 
   // Step 6: Run Context Builder agent
   step(6, totalSteps, "Run Context Builder agent (calling Claude)");
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error(`${c.red}  Error: ANTHROPIC_API_KEY not set. Use --skip-model for dry run.${c.reset}`);
+  const hasCredentials =
+    process.env.USE_COPILOT_SDK === "true" ||
+    process.env.ANTHROPIC_API_KEY ||
+    (process.env.AZURE_API_KEY && process.env.AZURE_API_BASE);
+  if (!hasCredentials) {
+    console.error(`${c.red}  Error: No API credentials found. Set one of:${c.reset}`);
+    console.error(`${c.red}    USE_COPILOT_SDK=true           — GitHub Copilot SDK${c.reset}`);
+    console.error(`${c.red}    ANTHROPIC_API_KEY              — Direct Anthropic API${c.reset}`);
+    console.error(`${c.red}    AZURE_API_KEY + AZURE_API_BASE — Azure Foundry${c.reset}`);
+    console.error(`${c.red}  Or use --skip-model for a dry run.${c.reset}`);
     process.exit(1);
   }
 
-  const model = modelOverride
-    ?? config?.agents?.["context-builder"]?.model === "fast"
-      ? (config?.models?.fast ?? "claude-sonnet-4-20250514")
-      : (config?.models?.primary ?? "claude-sonnet-4-20250514");
-
   const resolvedModel = (() => {
     if (modelOverride) return modelOverride;
-    if (!config) return "claude-sonnet-4-20250514";
+    if (!config) return "claude-sonnet-4-6";
     const agentModelRef = config.agents?.["context-builder"]?.model ?? "fast";
     const modelsMap: Record<string, string | undefined> = {
       primary: config.models.primary,
       fallback: config.models.fallback,
       fast: config.models.fast,
     };
-    return modelsMap[agentModelRef] ?? config.models.primary ?? "claude-sonnet-4-20250514";
+    return modelsMap[agentModelRef] ?? config.models.primary ?? "claude-sonnet-4-6";
   })();
 
   ciLog(`Model: ${resolvedModel}`);

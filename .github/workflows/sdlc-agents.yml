@@ -1,111 +1,211 @@
 # .github/workflows/sdlc-agents.yml
-# Copy this into your repository to enable AI agents.
 #
-# Prerequisites:
-#   1. Copy sample-agents-dir/ into your repo as .agents/
-#   2. Set ANTHROPIC_API_KEY in your repo's GitHub Secrets
-#   3. Adjust .agents/config.yaml to your needs
+# SDLC Agent Workflow — copy this into your pilot repo.
+#
+# How it works:
+#   1. A trigger fires (manual, schedule, or issue label)
+#   2. The workflow checks out YOUR repo
+#   3. It clones the sdlc-agents platform repo
+#   4. Installs dependencies and builds the platform
+#   5. Runs the Context Builder agent against YOUR repo
+#   6. Commits the generated docs back to YOUR repo
+#
+# Setup (one-time):
+#   1. Push sdlc-agents to a GitHub repo (e.g., your-org/sdlc-agents)
+#   2. Copy this file into your pilot repo at .github/workflows/sdlc-agents.yml
+#   3. Copy sample-agents-dir/ into your pilot repo as .agents/
+#   4. In your pilot repo → Settings → Secrets → Actions:
+#      - Add ANTHROPIC_API_KEY with your Anthropic API key
+#      - If sdlc-agents is a PRIVATE repo, also add:
+#        PLATFORM_REPO_TOKEN (a PAT with repo read access)
+#   5. Go to Actions tab → "SDLC Agents" → "Run workflow"
+#
+# ──────────────────────────────────────────────────────────────
+# IMPORTANT: Replace YOUR-ORG/sdlc-agents below with your actual
+# GitHub org and repo name for the platform repo.
+# ──────────────────────────────────────────────────────────────
 
 name: SDLC Agents
 
 on:
-  # Trigger context-builder on manual dispatch or weekly
+  # Manual trigger from GitHub UI (Actions tab → Run workflow)
   workflow_dispatch:
     inputs:
       agent:
-        description: "Agent to run"
+        description: "Which agent to run"
         required: true
         default: "context-builder"
         type: choice
         options:
           - context-builder
-          - code-review
-          - code-gen
+      model:
+        description: "Model override (leave empty for config default)"
+        required: false
+        type: string
 
-  # Trigger on issue labels (for code-gen, test-gen)
+  # Trigger when an issue is labeled
   issues:
     types: [labeled]
 
-  # Trigger on PR events (for code-review)
-  pull_request:
-    types: [opened, synchronize]
-
-  # Weekly context refresh
+  # Weekly context refresh (Monday 6am UTC)
   schedule:
-    - cron: "0 6 * * 1"  # Monday 6am UTC
+    - cron: "0 6 * * 1"
+
+# ──────────────────────────────────────────────────────────────
+# PERMISSIONS: The workflow needs write access to commit docs
+# back to the repo.
+# ──────────────────────────────────────────────────────────────
+permissions:
+  contents: write
+  issues: read
+
+env:
+  # ⬇️ CHANGE THIS to your actual platform repo
+  PLATFORM_REPO: YOUR-ORG/sdlc-agents
+  PLATFORM_REF: main
+  NODE_VERSION: "20"
 
 jobs:
-  # ───────────────────────────────────────
-  # Context Builder — Manual or scheduled
-  # ───────────────────────────────────────
+  # ═════════════════════════════════════════════════════════════
+  # Context Builder Agent
+  # ═════════════════════════════════════════════════════════════
   context-builder:
+    name: "🤖 Context Builder"
+
+    # Run on: manual dispatch, schedule, or issue labeled "agent:docs"
     if: >
-      github.event_name == 'workflow_dispatch' && github.event.inputs.agent == 'context-builder' ||
+      github.event_name == 'workflow_dispatch' ||
       github.event_name == 'schedule' ||
-      (github.event_name == 'issues' && contains(github.event.label.name, 'agent:docs'))
+      (github.event_name == 'issues' && github.event.label.name == 'agent:docs')
+
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 15
+
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      # ── Step 1: Checkout the pilot repo ──
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
         with:
-          node-version: "20"
+          fetch-depth: 0
 
-      # For the POC, clone the platform repo directly.
-      # In production, this would be a published Action reference.
-      - name: Clone agent platform
+      # ── Step 2: Setup Node.js ──
+      - name: "⚙️ Setup Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # ── Step 3: Clone the sdlc-agents platform ──
+      - name: "📦 Clone agent platform"
         run: |
-          git clone https://github.com/YOUR-ORG/sdlc-agents.git /tmp/sdlc-agents
-          cd /tmp/sdlc-agents
-          npm ci
-          npm run build
+          echo "Cloning sdlc-agents platform..."
 
-      - name: Run Context Builder
+          # If platform repo is PRIVATE, use PLATFORM_REPO_TOKEN
+          # If PUBLIC, default GITHUB_TOKEN works
+          TOKEN="${{ secrets.PLATFORM_REPO_TOKEN || github.token }}"
+
+          git clone \
+            --depth 1 \
+            --branch ${{ env.PLATFORM_REF }} \
+            https://x-access-token:${TOKEN}@github.com/${{ env.PLATFORM_REPO }}.git \
+            /tmp/sdlc-agents
+
+          echo "Platform cloned successfully."
+
+      # ── Step 4: Install and build platform ──
+      - name: "🔨 Build agent platform"
+        working-directory: /tmp/sdlc-agents
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+          echo "Platform built successfully."
+
+      # ── Step 5: Ensure .agents/ directory exists ──
+      - name: "📁 Initialize .agents/ config"
+        run: |
+          if [ ! -f ".agents/config.yaml" ]; then
+            echo "No .agents/config.yaml found — creating from template..."
+            mkdir -p .agents/docs
+            cp /tmp/sdlc-agents/sample-agents-dir/config.yaml .agents/config.yaml
+            cp /tmp/sdlc-agents/sample-agents-dir/context.yaml .agents/context.yaml
+            cp /tmp/sdlc-agents/sample-agents-dir/stack-profile.yaml .agents/stack-profile.yaml
+            echo "Created .agents/ with default config."
+          else
+            echo "Found existing .agents/config.yaml"
+          fi
+
+      # ── Step 6: Run the Context Builder agent ──
+      # Supports two backends (set secrets for ONE):
+      #   Azure Foundry: AZURE_API_KEY + AZURE_API_BASE
+      #   Direct Anthropic: ANTHROPIC_API_KEY
+      - name: "🧠 Run Context Builder"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AZURE_API_KEY: ${{ secrets.AZURE_API_KEY }}
+          AZURE_API_BASE: ${{ secrets.AZURE_API_BASE }}
         run: |
-          node /tmp/sdlc-agents/packages/agent-context/dist/cli.js \
-            --repo ${{ github.workspace }} \
-            --platform /tmp/sdlc-agents
+          MODEL_FLAG=""
+          if [ -n "${{ github.event.inputs.model }}" ]; then
+            MODEL_FLAG="--model ${{ github.event.inputs.model }}"
+          fi
 
-      - name: Commit generated docs
+          node /tmp/sdlc-agents/packages/agent-context/dist/cli.js \
+            --repo "${{ github.workspace }}" \
+            --platform /tmp/sdlc-agents \
+            $MODEL_FLAG
+
+      # ── Step 7: Commit generated docs back to repo ──
+      - name: "📝 Commit generated documentation"
         run: |
-          cd ${{ github.workspace }}
+          cd "${{ github.workspace }}"
+
           git config user.name "sdlc-agent[bot]"
           git config user.email "sdlc-agent[bot]@users.noreply.github.com"
+
+          # Stage generated docs + any new .agents/ config files
           git add .agents/docs/
-          git diff --staged --quiet || git commit -m "[agent] Update context documentation"
-          git push
+          git add .agents/config.yaml .agents/context.yaml .agents/stack-profile.yaml 2>/dev/null || true
 
-  # ───────────────────────────────────────
-  # Code Review — On PR events (Phase 1)
-  # ───────────────────────────────────────
-  code-review:
-    if: >
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'issues' && contains(github.event.label.name, 'agent:review'))
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - run: echo "Code Review agent — not yet implemented. Coming in Phase 1."
+          if git diff --staged --quiet; then
+            echo "No changes to commit — documentation is up to date."
+          else
+            COMMIT_MSG="[agent] Update context documentation
 
-  # ───────────────────────────────────────
-  # Code Generator — On issue labeled (Phase 2)
-  # ───────────────────────────────────────
-  code-gen:
-    if: >
-      github.event_name == 'issues' && contains(github.event.label.name, 'agent:implement') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.agent == 'code-gen')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    steps:
-      - uses: actions/checkout@v4
-      - run: echo "Code Gen agent — not yet implemented. Coming in Phase 2."
+          Generated by SDLC Context Builder agent.
+          Trigger: ${{ github.event_name }}
+          Model: ${{ github.event.inputs.model || 'config default' }}
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+            git commit -m "$COMMIT_MSG"
+            git push
+            echo "✅ Documentation committed and pushed."
+          fi
+
+      # ── Step 8: Upload docs as artifact ──
+      - name: "📤 Upload generated docs"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-context-docs
+          path: .agents/docs/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # ── Step 9: Comment on issue if triggered by label ──
+      - name: "💬 Comment on issue"
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const docsDir = '.agents/docs';
+            let fileList = '';
+            if (fs.existsSync(docsDir)) {
+              const files = fs.readdirSync(docsDir);
+              fileList = files.map(f => `- \`${f}\``).join('\n');
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🤖 Context Builder Complete\n\nDocumentation has been generated and committed to \`.agents/docs/\`.\n\n**Files generated:**\n${fileList || 'No files generated.'}\n\n**Workflow run:** [View logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+            });

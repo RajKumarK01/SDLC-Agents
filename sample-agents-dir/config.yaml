@@ -3,9 +3,9 @@
 
 models:
   # Model identifiers. Agents reference these by alias (primary, fallback, fast).
-  primary: claude-sonnet-4-20250514    # Best quality for code review/gen
+  primary: claude-sonnet-4-6    # Best quality for code review/gen
   fallback: gpt-4o                     # If primary fails
-  fast: claude-sonnet-4-20250514       # For lightweight tasks (context builder)
+  fast: claude-sonnet-4-6       # For lightweight tasks (context builder)
 
 runtime:
   type: github-actions
