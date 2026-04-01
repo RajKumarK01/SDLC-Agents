@@ -191,6 +191,7 @@ jobs:
           retention-days: 30
 
       # ── Step 9: Comment on issue if triggered by label ──
+      #Some changes may not trigger a new commit (e.g., if docs are up to date), so we comment with the results instead of relying on commit notifications.
       - name: "💬 Comment on issue"
         if: github.event_name == 'issues'
         uses: actions/github-script@v7
