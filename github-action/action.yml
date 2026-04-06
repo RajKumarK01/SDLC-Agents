@@ -42,7 +42,7 @@ runs:
       shell: bash
       env:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic-api-key }}
-        OPENAI_API_KEY: ${{ inputs.openai-api-key }}
+        OPENAI_API_KEY: ${{ inputs.openai-api-key }} 
       run: |
         AGENT="${{ inputs.agent }}"
         REPO_ROOT="${{ github.workspace }}"
